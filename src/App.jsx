@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Menu, Moon, User, LogOut, CalendarDays, Gem, BarChart3, X } from 'lucide-react'
+import { Menu, User, LogOut, CalendarDays, Gem, BarChart3, X, ShoppingBag, ClipboardList } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import Agenda from './pages/Agenda'
+import Vendas from './pages/Vendas'
 import Estoque from './pages/Estoque'
+import Procedimentos from './pages/Procedimentos'
 import Relatorios from './pages/Relatorios'
 
-const NAV = [['agenda', 'Agenda', CalendarDays], ['estoque', 'Estoque', Gem], ['relatorios', 'Relatórios', BarChart3]]
+const NAV = [['agenda', 'Agenda', CalendarDays], ['vendas', 'Vendas', ShoppingBag], ['estoque', 'Estoque', Gem],
+  ['procedimentos', 'Procedimentos', ClipboardList], ['relatorios', 'Relatórios', BarChart3]]
+const PAGES = { agenda: Agenda, vendas: Vendas, estoque: Estoque, procedimentos: Procedimentos, relatorios: Relatorios }
 
 function Login() {
   const [email, setEmail] = useState(''), [senha, setSenha] = useState(''), [erro, setErro] = useState('')
   const entrar = async e => { e.preventDefault(); const { error } = await supabase.auth.signInWithPassword({ email, password: senha }); if (error) setErro('E-mail ou senha incorretos.') }
   return (
     <div className="login"><form className="card login-card" onSubmit={entrar}>
-      <div className="logo big"><Moon size={30} /><span>Lua tattoos</span></div>
+      <div className="login-logo"><img className="logo-img xl" src="/logo.png" alt="Lua tattoos" /><span>Lua tattoos</span></div>
       <label>E-mail<input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
       <label>Senha<input type="password" value={senha} onChange={e => setSenha(e.target.value)} required /></label>
       {erro && <p className="erro">{erro}</p>}
@@ -28,12 +32,12 @@ export default function App() {
   }, [])
   if (session === undefined) return null
   if (!session) return <Login />
-  const Page = { agenda: Agenda, estoque: Estoque, relatorios: Relatorios }[page]
+  const Page = PAGES[page]
   return (
     <>
       <header className="topbar">
         <button className="icon-btn" aria-label="Abrir menu" onClick={() => setOpen(true)}><Menu /></button>
-        <div className="logo"><Moon size={22} /><span>Lua tattoos</span></div>
+        <div className="logo"><img className="logo-img" src="/logo.png" alt="" /><span>Lua tattoos</span></div>
         <div className="perfil">
           <button className="icon-btn" aria-label="Perfil" onClick={() => setMenu(!menu)}><User /></button>
           {menu && <div className="pop card"><small>{session.user.email}</small>

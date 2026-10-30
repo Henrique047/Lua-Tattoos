@@ -1,0 +1,82 @@
+/* ===== Novidades: logo, vendas, procedimentos, itens do agendamento ===== */
+input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--pk);cursor:pointer}
+.baixo{color:var(--rd)}
+
+/* ---------- logo ---------- */
+.logo{gap:.65rem}
+.logo-img{width:46px;height:46px;border-radius:50%;object-fit:cover;display:block;flex:none;border:2px solid var(--pk);box-shadow:0 0 0 3px rgba(212,133,159,.18),0 4px 14px rgba(0,0,0,.5);transition:transform .25s,box-shadow .25s}
+.logo:hover .logo-img{transform:rotate(-4deg) scale(1.04);box-shadow:0 0 0 4px rgba(212,133,159,.3),0 6px 18px rgba(212,133,159,.25)}
+.logo-img.xl{width:140px;height:140px;border-width:3px;box-shadow:0 0 0 7px rgba(212,133,159,.15),0 12px 34px rgba(0,0,0,.55)}
+.login-logo{display:grid;justify-items:center;gap:.9rem;margin:.2rem 0 .4rem}
+.login-logo span{font-family:Fraunces,serif;font-weight:700;font-size:1.9rem;color:var(--pk2)}
+.topbar{padding:.5rem 1rem}
+@media(max-width:420px){.logo span{font-size:1.1rem}.logo-img{width:40px;height:40px}}
+
+/* ---------- itens do agendamento (joia + procedimento) ---------- */
+.itens{display:grid;gap:.7rem;background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:.9rem}
+.itens-head{display:grid;gap:.1rem}
+.item-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 42px;gap:.6rem;align-items:end;padding:.7rem;background:var(--sf);border:1px solid var(--bd);border-radius:12px;animation:u .22s}
+.item-row .icon-btn{border:1px solid var(--bd);height:42px;width:42px}
+.itens .btn{justify-self:start}
+.it-lista{display:grid;gap:.4rem}
+.it-row{display:flex;flex-wrap:wrap;gap:.35rem 1.1rem;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:.55rem .75rem;font-size:.93rem}
+.it-row span{display:inline-flex;align-items:center;gap:.4rem}.it-row svg{color:var(--pk2);flex:none}
+@media(max-width:560px){
+ .item-row{grid-template-columns:minmax(0,1fr) 42px}
+ .item-row label:nth-child(1){grid-column:1;grid-row:1}.item-row label:nth-child(2){grid-column:1;grid-row:2}
+ .item-row .icon-btn{grid-column:2;grid-row:1/3;align-self:center}
+ .itens .btn{justify-self:stretch}}
+
+/* ---------- vendas ---------- */
+.vendas{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:1.2rem;align-items:start}
+.vendas.com-barra{padding-bottom:84px}
+.vlista{display:grid;gap:.6rem}
+.vlinha{display:grid;grid-template-columns:56px minmax(0,1.2fr) minmax(0,1.3fr) auto;gap:.9rem;align-items:center;padding:.7rem .8rem;background:var(--sf);border:1px solid var(--bd);border-radius:14px;transition:border-color .2s,background .2s,box-shadow .2s}
+.vlinha:hover{border-color:rgba(212,133,159,.55)}
+.vlinha.sel{border-color:var(--pk);background:rgba(212,133,159,.08);box-shadow:0 6px 20px rgba(212,133,159,.1)}
+.vinfo{display:grid;min-width:0}.vinfo strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vnums{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+.vnums span{display:block;font-size:.72rem;color:var(--mt)}.vnums b{font-size:.95rem}
+.stepper{display:flex;align-items:center;gap:.2rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:3px}
+.stepper button{width:36px;height:36px;border:0;background:none;color:var(--tx);border-radius:9px;cursor:pointer;display:grid;place-items:center;transition:background .15s,color .15s,transform .1s}
+.stepper button:hover:not(:disabled){background:var(--pk);color:#2a1119}.stepper button:active:not(:disabled){transform:scale(.92)}
+.stepper button:disabled{opacity:.3;cursor:not-allowed}
+.stepper b{min-width:28px;text-align:center;font-variant-numeric:tabular-nums}
+.carrinho{position:sticky;top:76px}
+.carrinho-in{display:grid;gap:.8rem}.carrinho-in h3{display:flex;align-items:center;gap:.5rem;margin:0}
+.res-itens{display:grid;gap:.4rem;max-height:240px;overflow:auto}
+.res-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.5rem;align-items:center;padding:.35rem .4rem .35rem .65rem;background:var(--bg);border:1px solid var(--bd);border-radius:10px;font-size:.88rem;animation:u .2s}
+.res-item .icon-btn{width:30px;height:30px}
+.res-linha{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
+.res-linha.total{padding-top:.7rem;border-top:1px dashed var(--bd)}
+.total-grande{font-family:Fraunces,serif;font-size:1.9rem;line-height:1.1}
+.ganho{display:flex;justify-content:space-between;align-items:center;background:rgba(111,207,151,.07);border:1px solid rgba(111,207,151,.3);border-radius:12px;padding:.65rem .9rem}
+.ganho b{font-size:1.15rem}
+.ok-msg{display:flex;align-items:center;gap:.5rem;margin:.6rem 0 0;padding:.65rem .9rem;border-radius:12px;color:var(--gr);background:rgba(111,207,151,.1);border:1px solid rgba(111,207,151,.35);animation:u .25s}
+.barra-venda{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.7rem 1rem calc(.7rem + env(safe-area-inset-bottom,0px));background:rgba(32,26,31,.97);backdrop-filter:blur(8px);border-top:1px solid var(--bd);box-shadow:0 -8px 24px rgba(0,0,0,.35);animation:u .25s}
+.barra-venda>div{display:grid;line-height:1.2}.barra-venda strong{font-family:Fraunces,serif;font-size:1.35rem}
+@media(max-width:900px){.vendas{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){
+ .vlinha{grid-template-columns:52px minmax(0,1fr) auto;gap:.5rem .7rem}
+ .vlinha .thumb{width:52px!important;height:52px!important}
+ .vnums{grid-column:1/-1;padding-top:.55rem;border-top:1px solid var(--bd)}}
+
+/* ---------- procedimentos ---------- */
+.plista{padding:.4rem}
+.plinha{display:grid;grid-template-columns:34px minmax(0,1fr) 130px 150px 84px;gap:.7rem;align-items:center;padding:.6rem;border-radius:10px;transition:background .2s}
+.plinha:hover{background:var(--sf2)}.plinha.marc{background:rgba(212,133,159,.1)}
+.plinha.cab{color:var(--mt);font-size:.8rem;border-bottom:1px solid var(--bd);border-radius:0;margin-bottom:.2rem}.plinha.cab:hover{background:none}
+.pchk{display:grid;place-items:center}
+.pnome{overflow:hidden;text-overflow:ellipsis}.pval{font-weight:700}
+.pmeta{display:none}
+.bulk{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:rgba(229,112,126,.1);border:1px solid rgba(229,112,126,.35);border-radius:12px;padding:.55rem .9rem;margin:.6rem 0;animation:u .2s}
+@media(max-width:700px){
+ .plinha{grid-template-columns:34px minmax(0,1fr) 84px;gap:.1rem .6rem}
+ .plinha .pval,.plinha .pcom{display:none}
+ .plinha .pmeta{display:block;grid-column:2;grid-row:2;color:var(--mt);font-size:.85rem}
+ .plinha .pchk{grid-row:1/3}.plinha .acoes{grid-column:3;grid-row:1/3}.plinha .pnome{grid-column:2;grid-row:1}
+ .plinha.cab{grid-template-columns:34px minmax(0,1fr)}.plinha.cab .acoes{display:none}}
+
+/* ---------- relatórios ---------- */
+.tabela .icon-btn{width:34px;height:34px}
+td .badge{white-space:nowrap}

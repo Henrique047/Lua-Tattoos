@@ -80,3 +80,87 @@ input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--pk);cur
 /* ---------- relatórios ---------- */
 .tabela .icon-btn{width:34px;height:34px}
 td .badge{white-space:nowrap}
+
+/* ---------- detalhe do histórico ---------- */
+tr.clicavel{cursor:pointer;transition:background .15s}tr.clicavel:hover,tr.clicavel:focus-visible{background:var(--sf2)}
+.dl-titulo{font-family:Fraunces,serif;font-size:1.02rem}
+.dl-itens{display:grid;gap:.6rem}
+.dl-item{display:grid;gap:.55rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:.7rem .8rem;animation:u .22s}
+.dl-nomes{display:grid;gap:.25rem}.dl-nomes>span{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}.dl-nomes svg{color:var(--pk2);flex:none}
+.dl-sub{padding-left:1.5rem}
+.dl-vals{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:.4rem}
+.dl-vals>div{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:.4rem .6rem;display:grid}
+.dl-vals span{font-size:.72rem;color:var(--mt)}.dl-vals b{font-size:.95rem}
+.dl-resumo{display:grid;gap:.35rem;background:var(--sf2);border:1px solid var(--bd);border-radius:12px;padding:.8rem .9rem}
+.dl-resumo hr{border:0;border-top:1px dashed var(--bd);margin:.25rem 0;width:100%}
+.dl-r{display:flex;justify-content:space-between;gap:1rem;font-size:.93rem}.dl-r span{color:var(--mt)}
+.dl-r.money b{color:var(--gr)}.dl-r.forte{font-size:1.05rem}.dl-r.forte span{color:var(--tx);font-weight:700}
+
+/* ===== Pagamentos (várias formas), taxas, encomendas, detalhes ===== */
+input[type=radio]{width:18px;height:18px;padding:0;accent-color:var(--pk);cursor:pointer;flex:none}
+.modal.wide{max-width:760px}
+.hint svg{vertical-align:-2px}
+
+/* linhas de pagamento */
+.pg{display:grid;gap:.6rem}
+.pg-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) 42px;gap:.6rem;align-items:end;padding:.7rem;background:var(--sf);border:1px solid var(--bd);border-radius:12px;animation:u .2s}
+.pg-row:not(:has(label:nth-child(3))){grid-template-columns:minmax(0,1fr) minmax(0,1fr) 42px}
+.pg-row .icon-btn{border:1px solid var(--bd);height:42px;width:42px}
+.pg-info{grid-column:1/-1;font-size:.8rem}
+.pg>.btn{justify-self:start}
+.pg-total{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;font-size:.88rem;color:var(--mt);padding:.55rem .8rem;background:var(--bg);border:1px solid var(--bd);border-radius:10px}
+.pg-total b{color:var(--tx)}.pg-total b.money{color:var(--gr)}.pg-total .ok{color:var(--gr)}.pg-total .erro{color:var(--rd)}
+.pagar>strong{font-size:.95rem}
+@media(max-width:560px){
+ .pg-row,.pg-row:not(:has(label:nth-child(3))){grid-template-columns:minmax(0,1fr) 42px}
+ .pg-row label{grid-column:1}.pg-row .icon-btn{grid-column:2;grid-row:1;align-self:end}
+ .pg>.btn{justify-self:stretch}}
+
+/* tela de taxas */
+.taxas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0}
+.taxa-card h3,.taxa-credito h3{display:flex;align-items:center;gap:.5rem;margin:0 0 .8rem}
+.taxa-campos{display:grid;gap:.7rem}
+.taxa-credito{margin-top:1rem}.taxa-credito table input[type=number]{width:120px}
+tr.inativa td{opacity:.5}
+
+/* encomendas */
+.enc-bloco{margin-top:1rem}.enc-bloco h3{display:flex;align-items:center;gap:.5rem;margin:0 0 .8rem}
+.contador{background:var(--sf2);border:1px solid var(--bd);border-radius:99px;font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.05rem .6rem;color:var(--pk2)}
+.enc-lista{display:grid;gap:.7rem}
+.enc-card{display:grid;grid-template-columns:56px minmax(0,1.3fr) minmax(0,1fr) auto;gap:.9rem;align-items:center;padding:.8rem;background:var(--sf2);border:1px solid var(--bd);border-radius:14px;transition:border-color .2s;animation:u .22s}
+.enc-card:hover{border-color:rgba(212,133,159,.55)}
+.enc-info{display:grid;min-width:0;gap:.05rem}
+.enc-vals{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+.enc-vals span{display:block;font-size:.72rem;color:var(--mt)}.enc-vals b{font-size:.95rem}
+.enc-acoes{display:grid;gap:.5rem;justify-items:end}
+.enc-botoes{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:flex-end}
+.enc-botoes .btn{padding:.45rem .8rem;font-size:.9rem}
+.opcoes{display:grid;gap:.5rem}
+.opcao{display:flex;align-items:flex-start;gap:.7rem;padding:.7rem .9rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px;cursor:pointer;color:var(--tx);font-size:.95rem;transition:border-color .2s,background .2s}
+.opcao.on{border-color:var(--pk);background:rgba(212,133,159,.08)}.opcao span{display:grid}.opcao small{color:var(--mt)}
+.enc-banner{display:grid;gap:.8rem;margin-top:.6rem}.enc-banner .btn{justify-self:start}
+.enc-banner-in{display:flex;gap:.9rem;align-items:center}.enc-banner-in>div{display:grid}
+.carrinho.estatico{position:static}
+.reserv{margin-left:.5rem;font-weight:400;vertical-align:middle}
+@media(max-width:900px){
+ .enc-card{grid-template-columns:56px minmax(0,1fr)}
+ .enc-vals,.enc-acoes{grid-column:1/-1}.enc-acoes{justify-items:stretch}.enc-botoes{justify-content:flex-start}
+ .enc-botoes .btn{flex:1 1 auto}}
+
+/* relatórios: detalhes e métricas */
+.kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.formas-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-bottom:1rem}
+.kpi.mini strong{font-size:1.25rem}.kpi.mini small{font-size:.78rem}
+table.clicavel tbody tr{cursor:pointer;transition:background .15s}table.clicavel tbody tr:hover{background:var(--sf2)}
+tr.info td{opacity:.65}.acao-linha{display:flex;align-items:center;gap:.2rem}
+.det h4{font-family:Fraunces,Georgia,serif;margin:.5rem 0 0;font-size:1.02rem;color:var(--pk2)}
+.det-cli{font-size:1.05rem}
+.det-itens{display:grid;gap:.5rem}
+.det-item{display:grid;gap:.5rem;padding:.7rem .8rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px}
+.det-item-nome{display:grid;gap:.15rem}
+.det-item-vals{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+.det-item-vals span{display:block;font-size:.72rem;color:var(--mt)}.det-item-vals b{font-size:.95rem}
+.res-det{display:grid;gap:.45rem;padding:.8rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px}
+.res-det .res-linha{font-size:.93rem}.res-det .res-linha.total{font-weight:700;font-size:1rem}
+@media(max-width:560px){.det-item-vals{grid-template-columns:1fr 1fr 1fr}.modal.wide{max-width:none}}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}

@@ -5,9 +5,10 @@ import timeGrid from '@fullcalendar/timegrid'
 import list from '@fullcalendar/list'
 import interaction from '@fullcalendar/interaction'
 import ptBr from '@fullcalendar/core/locales/pt-br'
-import { Plus, MessageCircle, Check, Ban, Pencil, Clock, Gem, Sparkles, Trash2 } from 'lucide-react'
+import { Plus, MessageCircle, Check, Ban, Pencil, Clock, Gem, Sparkles, Trash2, Package } from 'lucide-react'
 import { supabase, brl, toLocalInput, zap, mensagemWhats } from '../lib/supabase'
 import { r2, calcular } from '../lib/calc'
+import { PagamentoLinhas, useFormas, somaLinhas, paraRpc, linhasValidas } from '../lib/pagamentos'
 import useMobile from '../lib/useMobile'
 import Modal from './Modal'
 
@@ -18,25 +19,25 @@ const maisUmaHora = local => toLocalInput(new Date(new Date(local).getTime() + 3
 const itemVazio = () => ({ joia_id: '', procedimento_id: '' })
 const vazio = (inicio = hojeStr() + 'T10:00') => ({
   servico: 'piercing', cliente_nome: '', telefone: '', inicio, fim: maisUmaHora(inicio),
-  valor_total: 0, sinal: 0, desconto: 0, observacoes: '', itens: [itemVazio()]
+  valor_total: 0, desconto: 0, pagSinal: [], encomenda: null, observacoes: '', itens: [itemVazio()]
 })
-const falta = a => Math.max(0, r2(Number(a.valor_total || 0) - Number(a.desconto || 0) - Number(a.sinal || 0)))
 const txtJoia = j => [j?.nome, j?.tamanho, j?.material].filter(Boolean).join(' ')
 // resumo curto dos itens para a lista do dia
 const resumo = a => {
   const t = (a.agendamento_itens || []).map(i => [i.joias && txtJoia(i.joias), i.procedimentos?.nome].filter(Boolean).join(' + ')).filter(Boolean)
   return t.length > 2 ? `${t.slice(0, 2).join(' · ')} · +${t.length - 2}` : t.join(' · ')
 }
+const falta = a => Math.max(0, r2(Number(a.valor_total || 0) - Number(a.desconto || 0) - Number(a.sinal || 0)))
 
-export default function Agenda() {
-  const mobile = useMobile()
+export default function Agenda({ ctx }) {
+  const mobile = useMobile(), formas = useFormas()
   const [lista, setLista] = useState([]), [joias, setJoias] = useState([]), [procs, setProcs] = useState([]), [dia, setDia] = useState(hojeStr())
   const [form, setForm] = useState(null), [sel, setSel] = useState(null), [erro, setErro] = useState(''), [erroCarga, setErroCarga] = useState('')
-  const [pago, setPago] = useState(''), [busy, setBusy] = useState(false)
+  const [pago, setPago] = useState(''), [linhasConc, setLinhasConc] = useState([]), [busy, setBusy] = useState(false)
 
   const carregar = async () => {
     const [a, j, p] = await Promise.all([
-      supabase.from('agendamentos').select('*, agendamento_itens(id, joia_id, procedimento_id, joias(nome,tamanho,material), procedimentos(nome))')
+      supabase.from('agendamentos').select('*, encomendas(id,joia_id,valor_total,sinal), agendamento_itens(id, joia_id, procedimento_id, joias(nome,tamanho,material), procedimentos(nome))')
         .neq('status', 'cancelado').order('inicio').order('created_at', { referencedTable: 'agendamento_itens' }),
       supabase.from('joias').select('*').order('nome'),
       supabase.from('procedimentos').select('*').order('nome')])
@@ -45,8 +46,15 @@ export default function Agenda() {
   }
   useEffect(() => { carregar() }, [])
 
+  // vindo da tela de Encomendas ("Agendar"): o formulário abre com cliente, joia, total e sinal já preenchidos
+  useEffect(() => {
+    const e = ctx?.encomenda; if (!e) return
+    setForm({ ...vazio(), cliente_nome: e.cliente_nome, telefone: e.telefone || '', valor_total: Number(e.valor_total),
+      encomenda: { id: e.id, joia_id: e.joia_id, valor_total: Number(e.valor_total), sinal: Number(e.sinal) }, itens: [{ joia_id: e.joia_id, procedimento_id: '' }] })
+  }, [])
+
   // ao abrir um agendamento, o valor recebido já vem preenchido com o que falta
-  useEffect(() => { if (sel) setPago(String(falta(sel))) }, [sel?.id])
+  useEffect(() => { if (sel) { setPago(String(falta(sel))); setLinhasConc([]) } }, [sel?.id])
 
   const eventos = useMemo(() => lista.map(a => ({
     id: a.id, title: a.cliente_nome, start: a.inicio, end: a.fim,
@@ -69,8 +77,13 @@ export default function Agenda() {
     return { ...f, inicio: v, fim: v && dur > 0 ? toLocalInput(new Date(new Date(v).getTime() + dur).toISOString()) : f.fim }
   })
 
-  // itens (joia + procedimento): o valor total é a soma dos preços e continua editável
-  const resolver = it => ({ joia: joias.find(x => x.id === it.joia_id), proc: procs.find(x => x.id === it.procedimento_id) })
+  // itens (joia + procedimento): o valor total é a soma dos preços e continua editável.
+  // A joia de uma encomenda vale o preço combinado na encomenda, não o do catálogo.
+  const resolver = it => {
+    const joia = joias.find(x => x.id === it.joia_id)
+    const enc = form?.encomenda
+    return { joia: joia && enc && joia.id === enc.joia_id ? { ...joia, valor_venda: enc.valor_total } : joia, proc: procs.find(x => x.id === it.procedimento_id) }
+  }
   const somaItens = itens => itens.reduce((s, it) => { const { joia, proc } = resolver(it); return { j: s.j + Number(joia?.valor_venda || 0), p: s.p + Number(proc?.valor || 0) } }, { j: 0, p: 0 })
   const mudarItens = itens => setForm(f => { const s = somaItens(itens); return { ...f, itens, valor_total: r2(s.j + s.p) } })
   const setItem = (k, campo, v) => mudarItens(form.itens.map((it, i) => i === k ? { ...it, [campo]: v } : it))
@@ -80,32 +93,40 @@ export default function Agenda() {
     const usados = form.itens.filter(i => i.joia_id || i.procedimento_id), s = somaItens(usados)
     return { ...s, comissao: calcular(usados.map(resolver)).comissao }
   }
+  const sinalForm = form ? (form.encomenda ? Number(form.encomenda.sinal) : somaLinhas(form.pagSinal)) : 0
+  const faltaForm = form ? falta({ valor_total: form.valor_total, desconto: form.desconto, sinal: sinalForm }) : 0
 
   const salvar = async e => {
     e.preventDefault(); setErro('')
     if (new Date(form.fim) <= new Date(form.inicio)) return setErro('O horário final precisa ser depois do início.')
+    if (sinalForm > Number(form.valor_total || 0) - Number(form.desconto || 0) + 0.001) return setErro('O sinal não pode ser maior que o valor a cobrar.')
+    if (!form.encomenda && !linhasValidas(form.pagSinal, formas)) return setErro('Há uma forma de pagamento do sinal desativada ou sem taxa cadastrada.')
     const dados = {
       servico: form.servico, cliente_nome: form.cliente_nome, telefone: form.telefone || null, observacoes: form.observacoes || null,
-      joia_id: null, valor_total: Number(form.valor_total || 0), desconto: Number(form.desconto || 0), sinal: Number(form.sinal || 0),
+      valor_total: Number(form.valor_total || 0), desconto: Number(form.desconto || 0),
       inicio: new Date(form.inicio).toISOString(), fim: new Date(form.fim).toISOString()
     }
-    const r = form.id ? await supabase.from('agendamentos').update(dados).eq('id', form.id).select('id').single()
-      : await supabase.from('agendamentos').insert(dados).select('id').single()
-    if (r.error) return setErro(r.error.code === '23P01' ? 'Já existe um agendamento deste serviço nesse horário.' : r.error.message)
-    const id = r.data.id
-    // substitui os itens pelos que estão na tela (tatuagem não usa joia/procedimento)
-    if (form.id) { const d = await supabase.from('agendamento_itens').delete().eq('agendamento_id', id); if (d.error) return setErro(d.error.message) }
-    const novos = form.servico === 'piercing' ? form.itens.filter(i => i.joia_id || i.procedimento_id)
-      .map(i => ({ agendamento_id: id, joia_id: i.joia_id || null, procedimento_id: i.procedimento_id || null })) : []
-    if (novos.length) { const n = await supabase.from('agendamento_itens').insert(novos); if (n.error) return setErro(n.error.message) }
+    const itens = form.servico === 'piercing' ? form.itens.filter(i => i.joia_id || i.procedimento_id) : []
+    setBusy(true)
+    const { error } = await supabase.rpc('salvar_agendamento', {
+      p_id: form.id || null, p_dados: dados, p_itens: itens,
+      p_pagamentos: form.encomenda ? null : paraRpc(form.pagSinal), p_encomenda: !form.id && form.encomenda ? form.encomenda.id : null })
+    setBusy(false)
+    if (error) return setErro(error.code === '23P01' ? 'Já existe um agendamento deste serviço nesse horário.' : error.message)
     setForm(null); setSel(null); carregar()
   }
 
-  const editar = () => {
+  const editar = async () => {
     setErro('')
+    let pagSinal = []
+    if (!sel.encomendas) {
+      const { data } = await supabase.from('pagamentos').select('*').eq('agendamento_id', sel.id).eq('fase', 'sinal').order('created_at')
+      pagSinal = (data || []).map(p => ({ valor: String(p.valor), tipo: p.tipo, parcelas: p.parcelas, auto: false }))
+    }
     setForm({
       id: sel.id, servico: sel.servico, cliente_nome: sel.cliente_nome, telefone: sel.telefone || '',
-      inicio: toLocalInput(sel.inicio), fim: toLocalInput(sel.fim), valor_total: sel.valor_total, sinal: sel.sinal, desconto: sel.desconto,
+      inicio: toLocalInput(sel.inicio), fim: toLocalInput(sel.fim), valor_total: sel.valor_total, desconto: sel.desconto,
+      pagSinal, encomenda: sel.encomendas ? { id: sel.encomendas.id, joia_id: sel.encomendas.joia_id, valor_total: Number(sel.encomendas.valor_total), sinal: Number(sel.encomendas.sinal) } : null,
       observacoes: sel.observacoes || '',
       itens: sel.agendamento_itens?.length ? sel.agendamento_itens.map(i => ({ joia_id: i.joia_id || '', procedimento_id: i.procedimento_id || '' })) : [itemVazio()]
     })
@@ -116,17 +137,18 @@ export default function Agenda() {
   const pagoNum = pago === '' ? NaN : Number(pago)
   const pagoOk = !Number.isNaN(pagoNum) && pagoNum >= 0 && pagoNum <= faltaSel + 0.001
   const descExtra = pagoOk ? r2(faltaSel - pagoNum) : 0
+  const pagamentoOk = pagoOk && (pagoNum === 0 || (Math.abs(somaLinhas(linhasConc) - pagoNum) <= 0.01 && linhasValidas(linhasConc, formas)))
 
   const concluir = async () => {
     setBusy(true)
-    const { error } = await supabase.rpc('concluir_atendimento', { p_id: sel.id, p_valor_pago: pagoNum })
+    const { error } = await supabase.rpc('concluir_atendimento', { p_id: sel.id, p_valor_pago: pagoNum, p_pagamentos: paraRpc(linhasConc) })
     setBusy(false)
     if (error) return alert(error.message)
     setSel(null); carregar()
   }
   const cancelar = async () => {
-    if (!confirm('Cancelar este agendamento?')) return
-    const { error } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('id', sel.id)
+    if (!confirm('Cancelar este agendamento?' + (sel.encomendas ? ' A joia encomendada volta para a lista de joias que já chegaram.' : ''))) return
+    const { error } = await supabase.rpc('cancelar_agendamento', { p_id: sel.id })
     if (error) return alert(error.message)
     setSel(null); carregar()
   }
@@ -167,6 +189,7 @@ export default function Agenda() {
             <div className="det-tags">
               <span className="badge" style={{ '--c': COR[sel.servico] }}>{NOME[sel.servico]}</span>
               <span className="badge ghost"><Clock size={13} />{dataCurta(sel.inicio)} · {hora(sel.inicio)}–{hora(sel.fim)}</span>
+              {sel.encomendas && <span className="badge" style={{ '--c': '#e0b04a' }}><Package size={13} />Joia encomendada</span>}
               {sel.status === 'concluido' && <span className="badge ok"><Check size={13} />Concluído</span>}
             </div>
             {sel.agendamento_itens?.length > 0 && <div className="it-lista">{sel.agendamento_itens.map(i => (
@@ -193,9 +216,10 @@ export default function Agenda() {
                 {!pagoOk && <p className="hint erro">Digite um valor entre R$ 0,00 e {brl(faltaSel)}.</p>}
                 {pagoOk && descExtra > 0 && <p className="hint">Será registrado um desconto extra de <b>{brl(descExtra)}</b>. Total recebido do cliente: <b className="money">{brl(r2(Number(sel.sinal) + pagoNum))}</b>.</p>}
                 {pagoOk && descExtra === 0 && <p className="hint">O valor faltante será considerado pago por inteiro.</p>}
+                {pagoOk && pagoNum > 0 && <PagamentoLinhas formas={formas} linhas={linhasConc} onChange={setLinhasConc} total={pagoNum} />}
               </div>
               <div className="acts">
-                <button className="btn primary big" disabled={!pagoOk || busy} onClick={concluir}><Check size={18} />{busy ? 'Concluindo…' : 'Concluir trabalho'}</button>
+                <button className="btn primary big" disabled={!pagamentoOk || busy} onClick={concluir}><Check size={18} />{busy ? 'Concluindo…' : 'Concluir trabalho'}</button>
                 <div className="duo">
                   <button className="btn ghost" onClick={editar}><Pencil size={16} />Editar ou remarcar</button>
                   <button className="btn ghost danger" onClick={cancelar}><Ban size={16} />Cancelar</button>
@@ -203,12 +227,12 @@ export default function Agenda() {
               </div>
             </>}
 
-            {sel.status === 'concluido' && <p className="hint">Total recebido do cliente: <b className="money">{brl(r2(Number(sel.valor_total) - Number(sel.desconto)))}</b></p>}
+            {sel.status === 'concluido' && <p className="hint">Total recebido do cliente: <b className="money">{brl(r2(Number(sel.valor_total) - Number(sel.desconto)))}</b>. Veja o detalhamento completo em Relatórios.</p>}
           </div>
         </Modal>)}
 
       {form && (
-        <Modal title={form.id ? 'Editar agendamento' : 'Novo agendamento'} onClose={() => setForm(null)}>
+        <Modal wide title={form.id ? 'Editar agendamento' : 'Novo agendamento'} onClose={() => setForm(null)}>
           <form onSubmit={salvar} className="grid2">
             <label>Serviço<select value={form.servico} onChange={e => set('servico', e.target.value)}><option value="piercing">Piercing</option><option value="tatuagem">Tatuagem</option></select></label>
             <label>Cliente<input required value={form.cliente_nome} onChange={e => set('cliente_nome', e.target.value)} /></label>
@@ -216,10 +240,11 @@ export default function Agenda() {
 
             {form.servico === 'piercing' && <div className="full itens">
               <div className="itens-head"><strong>Joias e procedimentos</strong><small className="muted">Escolha só a joia, só o procedimento ou os dois</small></div>
+              {form.encomenda && <p className="hint"><Package size={14} /> A joia da encomenda já está selecionada (preço combinado de {brl(form.encomenda.valor_total)}). Escolha o procedimento.</p>}
               {form.itens.map((it, k) => (
                 <div className="item-row" key={k}>
                   <label>Joia<select value={it.joia_id} onChange={e => setItem(k, 'joia_id', e.target.value)}><option value="">Sem joia (cliente já tem)</option>
-                    {joias.map(j => <option key={j.id} value={j.id} disabled={j.quantidade < 1 && j.id !== it.joia_id}>{txtJoia(j)} · {brl(j.valor_venda)} ({j.quantidade})</option>)}</select></label>
+                    {joias.filter(j => !j.oculta || j.id === it.joia_id).map(j => <option key={j.id} value={j.id} disabled={j.quantidade < 1 && j.id !== it.joia_id}>{txtJoia(j)} · {brl(j.valor_venda)} ({j.quantidade})</option>)}</select></label>
                   <label>Procedimento<select value={it.procedimento_id} onChange={e => setItem(k, 'procedimento_id', e.target.value)}><option value="">Sem procedimento</option>
                     {procs.map(p => <option key={p.id} value={p.id}>{p.nome} · {brl(p.valor)}</option>)}</select></label>
                   <button type="button" className="icon-btn danger" aria-label="Remover linha" onClick={() => delItem(k)}><Trash2 size={17} /></button>
@@ -238,11 +263,19 @@ export default function Agenda() {
             <label>Fim<input type="datetime-local" required value={form.fim} onChange={e => set('fim', e.target.value)} /></label>
             <label>Valor total<input type="number" inputMode="decimal" step="0.01" min="0" value={form.valor_total} onChange={e => set('valor_total', e.target.value)} /></label>
             <label>Desconto<input type="number" inputMode="decimal" step="0.01" min="0" value={form.desconto} onChange={e => set('desconto', e.target.value)} /></label>
-            <label>Sinal pago<input type="number" inputMode="decimal" step="0.01" min="0" value={form.sinal} onChange={e => set('sinal', e.target.value)} /></label>
-            <label>Valor faltante<input readOnly className="money" value={brl(falta(form))} /></label>
+
+            <div className="full itens">
+              <div className="itens-head"><strong>Sinal</strong>
+                <small className="muted">{form.encomenda ? 'Sinal já pago na encomenda (não será contado de novo)' : 'Opcional. Pode ser dividido em várias formas de pagamento'}</small></div>
+              {form.encomenda
+                ? <div className="vals"><div><span>Sinal pago</span><b className="money">{brl(form.encomenda.sinal)}</b></div></div>
+                : <PagamentoLinhas formas={formas} linhas={form.pagSinal} onChange={l => set('pagSinal', l)} inicial={!form.id} />}
+              <div className="vals"><div><span>Valor faltante</span><b className="money">{brl(faltaForm)}</b></div></div>
+            </div>
+
             <label className="full">Observações<textarea rows="2" value={form.observacoes || ''} onChange={e => set('observacoes', e.target.value)} /></label>
             {erro && <p className="erro full">{erro}</p>}
-            <div className="row end full"><button type="button" className="btn ghost" onClick={() => setForm(null)}>Voltar</button><button className="btn primary">Salvar</button></div>
+            <div className="row end full"><button type="button" className="btn ghost" onClick={() => setForm(null)}>Voltar</button><button className="btn primary" disabled={busy}>{busy ? 'Salvando…' : 'Salvar'}</button></div>
           </form>
         </Modal>)}
     </div>)

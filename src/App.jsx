@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Menu, User, LogOut, CalendarDays, Gem, BarChart3, X, ShoppingBag, ClipboardList } from 'lucide-react'
+import { Menu, User, LogOut, CalendarDays, Gem, BarChart3, X, ShoppingBag, ClipboardList, Package, CreditCard } from 'lucide-react'
 import { supabase } from './lib/supabase'
 import Agenda from './pages/Agenda'
 import Vendas from './pages/Vendas'
 import Estoque from './pages/Estoque'
 import Procedimentos from './pages/Procedimentos'
 import Relatorios from './pages/Relatorios'
+import Encomendas from './pages/Encomendas'
+import Taxas from './pages/Taxas'
 
-const NAV = [['agenda', 'Agenda', CalendarDays], ['vendas', 'Vendas', ShoppingBag], ['estoque', 'Estoque', Gem],
-  ['procedimentos', 'Procedimentos', ClipboardList], ['relatorios', 'Relatórios', BarChart3]]
-const PAGES = { agenda: Agenda, vendas: Vendas, estoque: Estoque, procedimentos: Procedimentos, relatorios: Relatorios }
+const NAV = [['agenda', 'Agenda', CalendarDays], ['vendas', 'Vendas', ShoppingBag], ['encomendas', 'Encomendas', Package], ['estoque', 'Estoque', Gem],
+  ['procedimentos', 'Procedimentos', ClipboardList], ['relatorios', 'Relatórios', BarChart3], ['taxas', 'Pagamentos e taxas', CreditCard]]
+const PAGES = { agenda: Agenda, vendas: Vendas, encomendas: Encomendas, estoque: Estoque, procedimentos: Procedimentos, relatorios: Relatorios, taxas: Taxas }
 
 function Login() {
   const [email, setEmail] = useState(''), [senha, setSenha] = useState(''), [erro, setErro] = useState('')
@@ -25,7 +27,7 @@ function Login() {
 }
 
 export default function App() {
-  const [session, setSession] = useState(undefined), [page, setPage] = useState('agenda'), [open, setOpen] = useState(false), [menu, setMenu] = useState(false)
+  const [session, setSession] = useState(undefined), [page, setPage] = useState('agenda'), [ctx, setCtx] = useState(null), [open, setOpen] = useState(false), [menu, setMenu] = useState(false)
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data } = supabase.auth.onAuthStateChange((_, s) => setSession(s)); return () => data.subscription.unsubscribe()
@@ -33,6 +35,8 @@ export default function App() {
   if (session === undefined) return null
   if (!session) return <Login />
   const Page = PAGES[page]
+  // nav leva para outra tela; `c` carrega dados (ex.: a encomenda que será vendida ou agendada)
+  const nav = (p, c = null) => { setCtx(c); setPage(p); setOpen(false) }
   return (
     <>
       <header className="topbar">
@@ -48,8 +52,8 @@ export default function App() {
       <nav className={'side' + (open ? ' on' : '')}>
         <button className="icon-btn close" aria-label="Fechar menu" onClick={() => setOpen(false)}><X /></button>
         {NAV.map(([k, label, Icon]) => (
-          <button key={k} className={'nav' + (page === k ? ' active' : '')} onClick={() => { setPage(k); setOpen(false) }}><Icon size={20} />{label}</button>))}
+          <button key={k} className={'nav' + (page === k ? ' active' : '')} onClick={() => nav(k)}><Icon size={20} />{label}</button>))}
       </nav>
-      <main className="page"><Page /></main>
+      <main className="page"><Page key={page + (ctx?.encomenda?.id || '')} ctx={ctx} nav={nav} /></main>
     </>)
 }

@@ -16,9 +16,12 @@ export function mensagemWhats(a) {
   return `✨✅Oi, ${nome}, tudo bem? \nPassando pra confirmar seu atendimento ${quando} às ${hora} ✅✨`
 }
 
-// Aviso de que a joia encomendada chegou (WhatsApp)
+// Aviso de que a joia encomendada chegou e está pronta para retirada (WhatsApp)
 export function mensagemEncomenda(e) {
   const nome = String(e.cliente_nome || '').trim().split(/\s+/)[0]
   const resto = Math.max(0, Number(e.valor_total) - Number(e.sinal))
-  return `Olá, ${nome}! Sua joia encomendada chegou ao estúdio e já está reservada para você. O valor total foi de ${brl(e.valor_total)}, sendo ${brl(e.sinal)} já pagos como sinal. O valor restante é de ${brl(resto)}. Você já pode vir retirar sua joia ou agendar seu procedimento. Aguardamos você!`
+  const valores = resto <= 0.001 ? `O valor total de ${brl(e.valor_total)} já está pago.`
+    : Number(e.sinal) > 0 ? `O valor total foi de ${brl(e.valor_total)}, sendo ${brl(e.sinal)} já pagos como sinal. O valor restante é de ${brl(resto)}.`
+    : `O valor total é de ${brl(e.valor_total)}.`
+  return `Olá, ${nome}! Sua joia chegou ao estúdio e já está pronta para retirada. ${valores} Aguardamos você!`
 }

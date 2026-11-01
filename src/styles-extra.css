@@ -179,3 +179,21 @@ tr.info td{opacity:.65}.acao-linha{display:flex;align-items:center;gap:.2rem}
 .chip-local button{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:none;color:var(--mt);cursor:pointer;transition:background .15s,color .15s}
 .chip-local button:hover{background:rgba(229,112,126,.18);color:var(--rd)}
 @media(max-width:560px){.local-add{flex-direction:column}.local-add .btn{width:100%}}
+
+/* ===== Busca de joia em um campo só (Encomendas) e atalho de WhatsApp ===== */
+.campo-busca{display:grid;gap:.3rem}.campo-busca .rotulo{font-size:.85rem;color:var(--mt)}
+.busca-joia{position:relative}
+.busca-campo{display:flex;align-items:center;gap:.5rem;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:0 .75rem;color:var(--mt);transition:border-color .2s,box-shadow .2s}
+.busca-campo.on{border-color:var(--pk);box-shadow:0 0 0 3px rgba(212,133,159,.2)}
+.busca-campo input{border:0;background:none;padding:.65rem 0;min-width:0}
+.busca-campo input:focus{border:0;box-shadow:none}
+.busca-seta{flex:none;cursor:pointer;transition:transform .2s}.busca-campo.on .busca-seta{transform:rotate(180deg)}
+.busca-lista{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 6px);margin:0;padding:.3rem;list-style:none;max-height:260px;overflow:auto;background:var(--sf2);border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);animation:u .15s}
+.busca-lista li{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:.55rem .65rem;border-radius:8px;cursor:pointer}
+.busca-lista li.ativo{background:rgba(212,133,159,.16)}.busca-lista li.sel b{color:var(--pk2)}
+.busca-lista li.vazio{color:var(--mt);cursor:default}
+.bl-nome,.bl-meta{display:grid;min-width:0}.bl-meta{text-align:right;flex:none}
+.hint.aviso{color:var(--tx);background:rgba(224,176,74,.1);border:1px solid rgba(224,176,74,.4);border-radius:10px;padding:.55rem .75rem}
+.zap-link{display:inline-flex;align-items:center;gap:.4rem;justify-self:start;margin:.15rem 0;padding:.25rem .75rem;border-radius:99px;font-size:.88rem;text-decoration:none;color:var(--gr);background:rgba(111,207,151,.1);border:1px solid rgba(111,207,151,.38);transition:background .2s,transform .15s}
+.zap-link:hover{background:rgba(111,207,151,.2);transform:translateY(-1px)}
+.reserv-tag{color:#e0b04a;font-size:.75rem}

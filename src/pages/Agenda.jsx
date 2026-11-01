@@ -249,7 +249,7 @@ export default function Agenda({ ctx }) {
               {form.itens.map((it, k) => (
                 <div className="item-row" key={k}>
                   <label>Joia<select value={it.joia_id} onChange={e => setItem(k, 'joia_id', e.target.value)}><option value="">Sem joia (cliente já tem)</option>
-                    {joias.filter(j => !j.oculta || j.id === it.joia_id).map(j => <option key={j.id} value={j.id} disabled={j.quantidade < 1 && j.id !== it.joia_id}>{txtJoia(j)} · {brl(j.valor_venda)} ({j.quantidade})</option>)}</select></label>
+                    {joias.filter(j => !j.oculta || j.id === it.joia_id).map(j => <option key={j.id} value={j.id} disabled={j.quantidade < 1 && j.id !== it.joia_id}>{txtJoia(j)} · {brl(j.valor_venda)} ({j.quantidade}{j.reservado > 0 ? ` · ${j.reservado} reservada${j.reservado > 1 ? 's' : ''}` : ''})</option>)}</select></label>
                   <label>Procedimento<select value={it.procedimento_id} onChange={e => setItem(k, 'procedimento_id', e.target.value)}><option value="">Sem procedimento</option>
                     {procs.map(p => <option key={p.id} value={p.id}>{p.nome} · {brl(p.valor)}</option>)}</select></label>
                   <button type="button" className="icon-btn danger" aria-label="Remover linha" onClick={() => delItem(k)}><Trash2 size={17} /></button>

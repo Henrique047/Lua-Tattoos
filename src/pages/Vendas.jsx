@@ -113,7 +113,8 @@ export default function Vendas({ ctx, nav }) {
               <div className={'vlinha' + (n ? ' sel' : '')} key={j.id}>
                 <Thumb i={j} />
                 <div className="vinfo"><strong>{j.nome}</strong>
-                  <small className="muted">{[j.tipo, j.material, j.tamanho, j.local].filter(Boolean).join(' · ') || '–'}</small></div>
+                  <small className="muted">{[j.tipo, j.material, j.tamanho, j.local].filter(Boolean).join(' · ') || '–'}</small>
+                  {j.reservado > 0 && <small className="reserv-tag">{j.reservado} reservada{j.reservado > 1 ? 's' : ''} para cliente (fora desta lista)</small>}</div>
                 <div className="vnums">
                   <div><span>Valor</span><b>{brl(j.valor_venda)}</b></div>
                   <div><span>Comissão</span><b className="money">{brl(comUn(j))}</b></div>

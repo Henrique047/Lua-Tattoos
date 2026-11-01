@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Search, Image as Img } from 'lucide-react'
 import { supabase, brl } from '../lib/supabase'
 import Modal from './Modal'
-import { JoiaCampos, joiaVazia, MAT, LOCAIS } from './JoiaForm'
+import { JoiaCampos, joiaVazia, MAT } from './JoiaForm'
+import { useLocais } from '../lib/locais'
 
 export default function Estoque() {
   const [itens, setItens] = useState([]), [q, setQ] = useState(''), [f, setF] = useState({ material: '', local: '', tipo: '' })
@@ -11,6 +12,9 @@ export default function Estoque() {
   const carregar = async () => { const { data } = await supabase.from('joias').select('*').eq('oculta', false).order('nome'); setItens(data || []) }
   useEffect(() => { carregar() }, [])
   const tipos = [...new Set(itens.map(i => i.tipo).filter(Boolean))]
+  // locais cadastrados + os que já estão em uso nas joias (mesmo que tenham saído da lista)
+  const { locais } = useLocais()
+  const opcLocal = [...new Set([...locais.map(l => l.nome), ...itens.map(i => i.local).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   const vis = useMemo(() => itens.filter(i => (!q || i.nome.toLowerCase().includes(q.toLowerCase())) && Object.entries(f).every(([k, v]) => !v || i[k] === v)), [itens, q, f])
   const set = (k, v) => setForm(x => ({ ...x, [k]: v }))
   const salvar = async e => {
@@ -29,7 +33,7 @@ export default function Estoque() {
       <div className="row wrap filtros">
         <label className="busca"><Search size={16} /><input placeholder="Buscar por nome" value={q} onChange={e => setQ(e.target.value)} /></label>
         <select value={f.material} onChange={e => setF({ ...f, material: e.target.value })}><option value="">Material</option>{MAT.map(m => <option key={m}>{m}</option>)}</select>
-        <select value={f.local} onChange={e => setF({ ...f, local: e.target.value })}><option value="">Local</option>{LOCAIS.map(m => <option key={m}>{m}</option>)}</select>
+        <select value={f.local} onChange={e => setF({ ...f, local: e.target.value })}><option value="">Local</option>{opcLocal.map(m => <option key={m}>{m}</option>)}</select>
         <select value={f.tipo} onChange={e => setF({ ...f, tipo: e.target.value })}><option value="">Tipo</option>{tipos.map(m => <option key={m}>{m}</option>)}</select>
       </div>
       <div className="card lista">

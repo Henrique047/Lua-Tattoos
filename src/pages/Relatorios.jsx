@@ -166,13 +166,13 @@ export default function Relatorios() {
         <div className="card kpi"><span className="muted">Valor bruto (pago pelos clientes)</span><strong>{brl(total.bruto)}</strong></div>
         <div className="card kpi"><span className="muted">Taxas das operadoras</span><strong>{brl(total.taxa)}</strong></div>
         <div className="card kpi"><span className="muted">Valor líquido recebido</span><strong>{brl(total.liquido)}</strong></div>
-        <div className="card kpi"><span className="muted">Custos dos produtos</span><strong>{brl(total.custo)}</strong></div>
+        <div className="card kpi"><span className="muted">Custos (joias e tatuagens)</span><strong>{brl(total.custo)}</strong></div>
         <div className="card kpi"><span className="muted">Resultado após custos</span><strong>{brl(total.resultado)}</strong></div>
         <div className="card kpi"><span className="muted">Comissão da piercer</span><strong>{brl(total.comissao)}</strong></div>
         <div className="card kpi"><span className="muted">Parte do estúdio</span><strong>{brl(total.estudio)}</strong></div>
         <div className="card kpi"><span className="muted">Atendimentos e vendas</span><strong>{nRegistros}</strong></div>
       </div>
-      <p className="muted nota">Líquido = bruto − taxas · Resultado após custos = líquido − custo das joias · Parte do estúdio = resultado − comissão da piercer (descontos saem só daqui).{devolvidoTotal > 0 && <> Sinais devolvidos no período: <b>{brl(devolvidoTotal)}</b> (não entram nos totais).</>}</p>
+      <p className="muted nota">Líquido = bruto − taxas · Resultado após custos = líquido − custos (custo das joias e custo estimado das tatuagens) · Parte do estúdio = resultado − comissão da piercer (descontos saem só daqui).{devolvidoTotal > 0 && <> Sinais devolvidos no período: <b>{brl(devolvidoTotal)}</b> (não entram nos totais).</>}</p>
 
       <div className="formas-strip">{['Dinheiro', 'PIX', 'Débito', 'Crédito'].map(k => (
         <div className="card kpi mini" key={k}><span className="muted">Recebido em {k}</span><strong>{brl(porForma[k].bruto)}</strong>
@@ -264,7 +264,7 @@ function Detalhe({ r, onExcluir }) {
           </div>
           <div className="det-item-vals">
             <div><span>Valor cobrado</span><b>{brl(l.valor)}</b></div>
-            <div><span>Custo da joia</span><b>{brl(l.custo)}</b></div>
+            <div><span>{r.servico === 'tatuagem' ? 'Custo estimado' : 'Custo da joia'}</span><b>{brl(l.custo)}</b></div>
             <div><span>Comissão</span><b className="money">{brl(l.comissao)}</b></div>
           </div>
         </div>))}</div>
@@ -287,7 +287,7 @@ function Detalhe({ r, onExcluir }) {
           <div className="res-linha"><span>Valor bruto</span><b>{brl(G)}</b></div>
           <div className="res-linha"><span>− Taxas das operadoras</span><b>{brl(taxas)}</b></div>
           <div className="res-linha"><span>Valor líquido recebido</span><b>{brl(liquido)}</b></div>
-          <div className="res-linha"><span>− Custo das joias</span><b>{brl(custo)}</b></div>
+          <div className="res-linha"><span>− Custos (joias e tatuagem)</span><b>{brl(custo)}</b></div>
           <div className="res-linha total"><span>Resultado após custos</span><b>{brl(resultado)}</b></div>
           <div className="res-linha"><span>− Comissão da piercer</span><b className="money">{brl(com)}</b></div>
           <div className="res-linha total"><span>Parte do estúdio</span><b className="money">{brl(resultado - com)}</b></div>

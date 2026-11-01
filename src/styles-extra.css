@@ -164,3 +164,18 @@ tr.info td{opacity:.65}.acao-linha{display:flex;align-items:center;gap:.2rem}
 .res-det .res-linha{font-size:.93rem}.res-det .res-linha.total{font-weight:700;font-size:1rem}
 @media(max-width:560px){.det-item-vals{grid-template-columns:1fr 1fr 1fr}.modal.wide{max-width:none}}
 @media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== Locais de aplicação (adicionar / excluir) ===== */
+.campo-local{display:grid;gap:.3rem;min-width:0}
+.campo-local>label{font-size:.85rem;color:var(--mt)}
+.select-mais{display:flex;gap:.4rem;align-items:stretch}
+.select-mais select{flex:1;min-width:0}
+.select-mais .icon-btn{flex:none;width:42px;height:auto;min-height:42px;border:1px solid var(--bd);background:var(--bg)}
+.select-mais .icon-btn:hover,.select-mais .icon-btn.ativo{border-color:var(--pk);color:var(--pk2)}
+.local-gerir{display:grid;gap:.6rem;padding:.8rem;background:var(--bg);border:1px solid var(--bd);border-radius:12px;animation:u .2s}
+.local-add{display:flex;gap:.5rem}.local-add input{flex:1;min-width:0}.local-add .btn{flex:none}
+.local-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip-local{display:inline-flex;align-items:center;gap:.15rem;background:var(--sf2);border:1px solid var(--bd);border-radius:99px;padding:.15rem .25rem .15rem .75rem;font-size:.85rem}
+.chip-local button{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:50%;background:none;color:var(--mt);cursor:pointer;transition:background .15s,color .15s}
+.chip-local button:hover{background:rgba(229,112,126,.18);color:var(--rd)}
+@media(max-width:560px){.local-add{flex-direction:column}.local-add .btn{width:100%}}

@@ -19,7 +19,7 @@ const maisUmaHora = local => toLocalInput(new Date(new Date(local).getTime() + 3
 const itemVazio = () => ({ joia_id: '', procedimento_id: '' })
 const vazio = (inicio = hojeStr() + 'T10:00') => ({
   servico: 'piercing', cliente_nome: '', telefone: '', inicio, fim: maisUmaHora(inicio),
-  valor_total: 0, desconto: 0, pagSinal: [], encomenda: null, observacoes: '', itens: [itemVazio()]
+  valor_total: 0, desconto: 0, custo_tatuagem: '', pagSinal: [], encomenda: null, observacoes: '', itens: [itemVazio()]
 })
 const txtJoia = j => [j?.nome, j?.tamanho, j?.material].filter(Boolean).join(' ')
 // resumo curto dos itens para a lista do dia
@@ -95,15 +95,19 @@ export default function Agenda({ ctx }) {
   }
   const sinalForm = form ? (form.encomenda ? Number(form.encomenda.sinal) : somaLinhas(form.pagSinal)) : 0
   const faltaForm = form ? falta({ valor_total: form.valor_total, desconto: form.desconto, sinal: sinalForm }) : 0
+  const cobrarForm = form ? Math.max(0, Number(form.valor_total || 0) - Number(form.desconto || 0)) : 0
+  const custoForm = form ? (Number(form.custo_tatuagem || 0) || 0) : 0
 
   const salvar = async e => {
     e.preventDefault(); setErro('')
     if (new Date(form.fim) <= new Date(form.inicio)) return setErro('O horário final precisa ser depois do início.')
+    const custo = form.servico === 'tatuagem' ? Number(form.custo_tatuagem || 0) : 0
+    if (Number.isNaN(custo) || custo < 0) return setErro('O custo precisa ser um valor igual ou maior que zero.')
     if (sinalForm > Number(form.valor_total || 0) - Number(form.desconto || 0) + 0.001) return setErro('O sinal não pode ser maior que o valor a cobrar.')
     if (!form.encomenda && !linhasValidas(form.pagSinal, formas)) return setErro('Há uma forma de pagamento do sinal desativada ou sem taxa cadastrada.')
     const dados = {
       servico: form.servico, cliente_nome: form.cliente_nome, telefone: form.telefone || null, observacoes: form.observacoes || null,
-      valor_total: Number(form.valor_total || 0), desconto: Number(form.desconto || 0),
+      valor_total: Number(form.valor_total || 0), desconto: Number(form.desconto || 0), custo_tatuagem: custo,
       inicio: new Date(form.inicio).toISOString(), fim: new Date(form.fim).toISOString()
     }
     const itens = form.servico === 'piercing' ? form.itens.filter(i => i.joia_id || i.procedimento_id) : []
@@ -125,7 +129,7 @@ export default function Agenda({ ctx }) {
     }
     setForm({
       id: sel.id, servico: sel.servico, cliente_nome: sel.cliente_nome, telefone: sel.telefone || '',
-      inicio: toLocalInput(sel.inicio), fim: toLocalInput(sel.fim), valor_total: sel.valor_total, desconto: sel.desconto,
+      inicio: toLocalInput(sel.inicio), fim: toLocalInput(sel.fim), valor_total: sel.valor_total, desconto: sel.desconto, custo_tatuagem: Number(sel.custo_tatuagem) > 0 ? String(sel.custo_tatuagem) : '',
       pagSinal, encomenda: sel.encomendas ? { id: sel.encomendas.id, joia_id: sel.encomendas.joia_id, valor_total: Number(sel.encomendas.valor_total), sinal: Number(sel.encomendas.sinal) } : null,
       observacoes: sel.observacoes || '',
       itens: sel.agendamento_itens?.length ? sel.agendamento_itens.map(i => ({ joia_id: i.joia_id || '', procedimento_id: i.procedimento_id || '' })) : [itemVazio()]
@@ -205,6 +209,7 @@ export default function Agenda({ ctx }) {
               <div><span>Desconto</span><b>{brl(sel.desconto)}</b></div>
               <div><span>Sinal pago</span><b className="money">{brl(sel.sinal)}</b></div>
             </div>
+            {sel.servico === 'tatuagem' && Number(sel.custo_tatuagem) > 0 && <p className="hint">Custo estimado da tatuagem: <b>{brl(sel.custo_tatuagem)}</b> (entra nos relatórios como custo).</p>}
 
             {sel.status === 'agendado' && <>
               <div className="pagar">
@@ -263,6 +268,16 @@ export default function Agenda({ ctx }) {
             <label>Fim<input type="datetime-local" required value={form.fim} onChange={e => set('fim', e.target.value)} /></label>
             <label>Valor total<input type="number" inputMode="decimal" step="0.01" min="0" value={form.valor_total} onChange={e => set('valor_total', e.target.value)} /></label>
             <label>Desconto<input type="number" inputMode="decimal" step="0.01" min="0" value={form.desconto} onChange={e => set('desconto', e.target.value)} /></label>
+
+            {form.servico === 'tatuagem' && <div className="full itens">
+              <div className="itens-head"><strong>Custo da tatuagem</strong><small className="muted">Opcional: uma estimativa usada nos relatórios para calcular o lucro. Em branco vale R$ 0,00.</small></div>
+              <label>Custo estimado (R$)<input type="number" inputMode="decimal" step="0.01" min="0" placeholder="0,00" value={form.custo_tatuagem} onChange={e => set('custo_tatuagem', e.target.value)} /></label>
+              <div className="vals">
+                <div><span>A cobrar</span><b className="money">{brl(cobrarForm)}</b></div>
+                <div><span>Custo estimado</span><b>{brl(custoForm)}</b></div>
+                <div><span>Lucro estimado</span><b className="money">{brl(cobrarForm - custoForm)}</b></div>
+              </div>
+            </div>}
 
             <div className="full itens">
               <div className="itens-head"><strong>Sinal</strong>

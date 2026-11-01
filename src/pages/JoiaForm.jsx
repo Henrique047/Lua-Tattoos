@@ -34,7 +34,7 @@ function LocalSelect({ value, onChange }) {
     </div>
     {gerir && <div className="full local-gerir">
       <div className="local-add">
-        <input value={novo} placeholder="Novo local (ex.: Língua, Septo…)" maxLength={40} onChange={e => setNovo(e.target.value)}
+        <input value={novo} placeholder="Novo local (Língua, Septo…)" maxLength={40} onChange={e => setNovo(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }} />
         <button type="button" className="btn primary" onClick={add}><Plus size={16} />Adicionar</button>
       </div>

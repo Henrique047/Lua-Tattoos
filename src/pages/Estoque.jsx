@@ -7,9 +7,12 @@ import { useLocais } from '../lib/locais'
 
 export default function Estoque() {
   const [itens, setItens] = useState([]), [q, setQ] = useState(''), [f, setF] = useState({ material: '', local: '', tipo: '' })
-  const [form, setForm] = useState(null), [qtd, setQtd] = useState(null), [add, setAdd] = useState(0)
+  const [form, setForm] = useState(null), [qtd, setQtd] = useState(null), [add, setAdd] = useState(0), [comp, setComp] = useState({})
   // joias exclusivas de encomenda (oculta = true) não aparecem no estoque convencional
-  const carregar = async () => { const { data } = await supabase.from('joias').select('*').eq('oculta', false).order('nome'); setItens(data || []) }
+  const carregar = async () => {
+    const [j, c] = await Promise.all([supabase.from('joias').select('*').eq('oculta', false).order('nome'), supabase.rpc('joias_comprometidas', { p_excluir: null })])
+    setItens(j.data || []); setComp(Object.fromEntries((c.data || []).map(r => [r.joia_id, r.qtd])))   // unidades já comprometidas em agendamentos abertos
+  }
   useEffect(() => { carregar() }, [])
   const tipos = [...new Set(itens.map(i => i.tipo).filter(Boolean))]
   // locais cadastrados + os que já estão em uso nas joias (mesmo que tenham saído da lista)
@@ -42,7 +45,7 @@ export default function Estoque() {
           <div className="linha" key={i.id}>
             <Thumb i={i} />
             <button className={'qtd' + (i.quantidade <= 2 ? ' baixo' : '')} onClick={() => setQtd(i)} title="Dar entrada">{i.quantidade}</button>
-            <strong className="nome">{i.nome}{i.reservado > 0 && <span className="badge ghost reserv">{i.reservado} reservada{i.reservado > 1 ? 's' : ''}</span>}</strong>
+            <strong className="nome">{i.nome}{i.reservado > 0 && <span className="badge ghost reserv">{i.reservado} reservada{i.reservado > 1 ? 's' : ''}</span>}{comp[i.id] > 0 && <span className="badge reserv" style={{ '--c': '#e0b04a' }}>{comp[i.id]} em agendamento{comp[i.id] > 1 ? 's' : ''}</span>}</strong>
             <span>{i.material || '–'}</span><span>{i.tamanho || '–'}</span><span>{i.local || '–'}</span>
             <span>{brl(i.valor_venda)}</span>
             <span className="muted">{i.comissao_tipo === 'percentual' ? `${i.comissao_valor}%` : brl(i.comissao_valor)}</span>

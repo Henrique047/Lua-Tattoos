@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Image as Img, Minus, Plus, ShoppingBag, X, Check, Package, ArrowLeft } from 'lucide-react'
+import { Search, Image as Img, Minus, Plus, ShoppingBag, X, Check, Package, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { supabase, brl } from '../lib/supabase'
 import { r2, calcular } from '../lib/calc'
 import { PagamentoLinhas, useFormas, somaLinhas, paraRpc, linhasValidas } from '../lib/pagamentos'
@@ -19,11 +19,13 @@ export default function Vendas({ ctx, nav }) {
   const mobile = useMobile(900), formas = useFormas()
   const [joias, setJoias] = useState([]), [q, setQ] = useState(''), [f, setF] = useState({ material: '', local: '', tipo: '' })
   const [cart, setCart] = useState({}), [desc, setDesc] = useState(''), [cliente, setCliente] = useState(''), [pag, setPag] = useState([])
-  const [busy, setBusy] = useState(false), [ok, setOk] = useState(''), [erro, setErro] = useState(''), [aberto, setAberto] = useState(false)
+  const [busy, setBusy] = useState(false), [comp, setComp] = useState({}), [ok, setOk] = useState(''), [erro, setErro] = useState(''), [aberto, setAberto] = useState(false)
 
   const carregar = async () => {
     const { data, error } = await supabase.from('joias').select('*').eq('oculta', false).gt('quantidade', 0).order('nome')
     if (error) setErro(error.message); setJoias(data || [])
+    const c = await supabase.rpc('joias_comprometidas', { p_excluir: null })
+    setComp(Object.fromEntries((c.data || []).map(r => [r.joia_id, r.qtd])))   // unidades já usadas em agendamentos abertos
   }
   useEffect(() => { carregar() }, [])
 
@@ -38,7 +40,7 @@ export default function Vendas({ ctx, nav }) {
 
   // ---------- totais ----------
   // na venda de encomenda, a joia vale o preço combinado e o sinal já foi pago
-  const itens = enc ? [{ joia: { ...enc.joias, valor_venda: Number(enc.valor_total) }, qtd: 1 }]
+  const itens = enc ? [...(enc.encomenda_itens || [])].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).map(i => ({ joia: { ...i.joias, valor_venda: Number(i.valor) }, qtd: 1 }))
     : joias.filter(j => cart[j.id] > 0).map(j => ({ joia: j, qtd: cart[j.id] }))
   const qtdTotal = itens.reduce((s, i) => s + i.qtd, 0)
   const sinal = enc ? Number(enc.sinal) : 0
@@ -48,6 +50,9 @@ export default function Vendas({ ctx, nav }) {
   const total = descOk ? r2(subtotal - descNum) : subtotal
   const restante = Math.max(0, r2(total - sinal))      // o que ainda será pago agora
   const { comissao } = calcular(itens)                 // não muda com desconto
+  // vender essas unidades deixaria agendamentos em aberto sem a joia (aviso, não bloqueia)
+  const avisos = enc ? [] : itens.filter(i => i.qtd > i.joia.quantidade - (comp[i.joia.id] || 0))
+    .map(i => `${i.joia.nome} ${i.joia.tamanho || ''}: ${comp[i.joia.id]} das ${i.joia.quantidade} unidades em estoque já estão em agendamentos abertos.`)
   const pagOk = restante <= 0.001 || (Math.abs(somaLinhas(pag) - restante) <= 0.01 && linhasValidas(pag, formas))
 
   const vender = async () => {
@@ -66,8 +71,8 @@ export default function Vendas({ ctx, nav }) {
     <div className="carrinho-in">
       <h3><ShoppingBag size={18} /> Venda</h3>
       {itens.length === 0 ? <p className="muted">Use os botões + nas joias para montar a venda.</p> :
-        <div className="res-itens">{itens.map(({ joia, qtd }) => (
-          <div className="res-item" key={joia.id}>
+        <div className="res-itens">{itens.map(({ joia, qtd }, n) => (
+          <div className="res-item" key={joia.id + n}>
             <span><b>{joia.nome}</b> <small className="muted">{joia.tamanho}</small></span>
             <span className="muted">{qtd} × {brl(joia.valor_venda)}</span>
             {!enc && <button className="icon-btn danger" aria-label="Remover" onClick={() => setCart(c => { const n = { ...c }; delete n[joia.id]; return n })}><X size={15} /></button>}
@@ -83,6 +88,7 @@ export default function Vendas({ ctx, nav }) {
       {restante > 0.001 && itens.length > 0 && <div className="pagar"><strong>Forma de pagamento{enc ? ' do restante' : ''}</strong>
         <PagamentoLinhas formas={formas} linhas={pag} onChange={setPag} total={restante} /></div>}
       <div className="ganho"><span>Lucro da piercer</span><b className="money">{brl(comissao)}</b></div>
+      {avisos.length > 0 && <div className="alerta-estoque" role="alert"><AlertTriangle size={20} /><div><strong>Atenção: joia comprometida</strong>{avisos.map((m, i) => <p key={i}>{m}</p>)}<small>Você pode vender mesmo assim, mas esses agendamentos ficarão sem a joia.</small></div></div>}
       {erro && <p className="hint erro">{erro}</p>}
       <button className="btn primary big" disabled={!itens.length || !descOk || !pagOk || busy} onClick={vender}><Check size={18} />{busy ? 'Registrando…' : 'Vender'}</button>
     </div>)
@@ -94,9 +100,9 @@ export default function Vendas({ ctx, nav }) {
         <h2>Vendas</h2>
         {enc ? <div className="card enc-banner">
           <button className="btn ghost" onClick={() => nav('encomendas')}><ArrowLeft size={16} />Voltar às encomendas</button>
-          <div className="enc-banner-in"><Thumb i={enc.joias} /><div><strong><Package size={15} /> Venda de joia encomendada</strong>
+          <div className="enc-banner-in"><Thumb i={itens[0]?.joia} /><div><strong><Package size={15} /> Venda de joias encomendadas</strong>
             <span>{enc.cliente_nome}{enc.telefone ? ` · ${enc.telefone}` : ''}</span>
-            <small className="muted">{[enc.joias?.nome, enc.joias?.tamanho, enc.joias?.material].filter(Boolean).join(' · ')}</small></div></div>
+            <small className="muted">{itens.map(({ joia }) => [joia.nome, joia.tamanho].filter(Boolean).join(' ')).join(' · ')}</small></div></div>
           <div className="vals"><div><span>Valor total</span><b>{brl(enc.valor_total)}</b></div><div><span>Sinal pago</span><b className="money">{brl(enc.sinal)}</b></div>
             <div><span>Restante</span><b>{brl(Number(enc.valor_total) - Number(enc.sinal))}</b></div></div>
         </div> : <>
@@ -114,6 +120,7 @@ export default function Vendas({ ctx, nav }) {
                 <Thumb i={j} />
                 <div className="vinfo"><strong>{j.nome}</strong>
                   <small className="muted">{[j.tipo, j.material, j.tamanho, j.local].filter(Boolean).join(' · ') || '–'}</small>
+                  {comp[j.id] > 0 && <small className="reserv-tag">{comp[j.id]} em agendamento{comp[j.id] > 1 ? 's' : ''} aberto{comp[j.id] > 1 ? 's' : ''}</small>}
                   {j.reservado > 0 && <small className="reserv-tag">{j.reservado} reservada{j.reservado > 1 ? 's' : ''} para cliente (fora desta lista)</small>}</div>
                 <div className="vnums">
                   <div><span>Valor</span><b>{brl(j.valor_venda)}</b></div>

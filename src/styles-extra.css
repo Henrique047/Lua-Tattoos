@@ -197,3 +197,26 @@ tr.info td{opacity:.65}.acao-linha{display:flex;align-items:center;gap:.2rem}
 .zap-link{display:inline-flex;align-items:center;gap:.4rem;justify-self:start;margin:.15rem 0;padding:.25rem .75rem;border-radius:99px;font-size:.88rem;text-decoration:none;color:var(--gr);background:rgba(111,207,151,.1);border:1px solid rgba(111,207,151,.38);transition:background .2s,transform .15s}
 .zap-link:hover{background:rgba(111,207,151,.2);transform:translateY(-1px)}
 .reserv-tag{color:#e0b04a;font-size:.75rem}
+
+/* ===== Aviso de estoque (joia sem unidade disponível) ===== */
+.alerta-estoque{display:flex;gap:.7rem;align-items:flex-start;padding:.75rem .9rem;border-radius:12px;color:#ffd9de;background:rgba(229,112,126,.13);border:1px solid rgba(229,112,126,.6);animation:u .2s}
+.alerta-estoque>svg{flex:none;color:var(--rd);margin-top:2px}
+.alerta-estoque>div{display:grid;gap:.25rem;min-width:0}
+.alerta-estoque strong{color:var(--rd)}
+.alerta-estoque p{margin:0;font-size:.9rem;color:var(--tx)}
+.alerta-estoque small{color:var(--mt)}
+.item-row.alerta{border-color:var(--rd);background:rgba(229,112,126,.07)}
+.item-row.alerta select{border-color:var(--rd)}
+
+/* ===== Pedidos com várias joias (Encomendas) ===== */
+.enc-item-form{display:grid;gap:.7rem;padding:.9rem;background:var(--sf);border:1px solid var(--bd);border-radius:12px;animation:u .22s}
+.enc-item-head{display:flex;justify-content:space-between;align-items:center}
+.enc-item-head strong{font-family:Fraunces,serif;color:var(--pk2)}
+.enc-item-head .icon-btn{border:1px solid var(--bd)}
+.enc-thumb{position:relative;width:56px;height:56px}
+.enc-mais{position:absolute;right:-6px;bottom:-6px;min-width:24px;height:24px;padding:0 5px;display:grid;place-items:center;border-radius:99px;font-size:.72rem;font-weight:700;color:#2a1119;background:var(--pk);border:2px solid var(--sf2)}
+.enc-joias{list-style:none;margin:.2rem 0;padding:0;display:grid;gap:.2rem}
+.enc-joias li{display:flex;justify-content:space-between;gap:.8rem;align-items:baseline;font-size:.92rem}
+.enc-joias li span{min-width:0}.enc-joias li b{flex:none;color:var(--tx)}
+.item-row .tag-enc{display:grid;place-items:center;height:42px;width:42px;color:#e0b04a}
+.opcao input[type=checkbox]{margin-top:.15rem}

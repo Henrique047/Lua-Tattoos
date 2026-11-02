@@ -4,6 +4,12 @@ import { brl } from '../lib/supabase'
 
 // sem diferenciar maiúsculas, minúsculas nem acentos
 const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+// o que está livre de verdade (se a tela informar `disponivel`, desconta o que já está em agendamentos)
+const estoqueTxt = j => {
+  const d = j.disponivel ?? j.quantidade, c = j.comprometidas || 0
+  if (d > 0) return `${d} disponível${d > 1 ? 'is' : ''}${c ? ` · ${c} em agendamento${c > 1 ? 's' : ''}` : ''}`
+  return j.quantidade > 0 ? `${j.quantidade} em estoque, já em agendamento` : 'sem estoque'
+}
 const texto = j => [j.nome, j.tipo, j.tamanho, j.material, j.local].filter(Boolean).join(' · ')
 
 // Um campo só: clique para ver a lista completa ou digite para filtrar (todas as palavras precisam aparecer).
@@ -41,7 +47,7 @@ export default function JoiaBusca({ joias, valor, onChange }) {
           <li key={j.id} role="option" aria-selected={j.id === valor} className={(i === idx ? 'ativo ' : '') + (j.id === valor ? 'sel' : '')}
             onMouseDown={e => { e.preventDefault(); escolher(j) }} onMouseEnter={() => setIdx(i)}>
             <span className="bl-nome"><b>{j.nome}</b><small className="muted">{[j.tipo, j.tamanho, j.material, j.local].filter(Boolean).join(' · ') || '–'}</small></span>
-            <span className="bl-meta"><b>{brl(j.valor_venda)}</b><small className={j.quantidade > 0 ? 'money' : 'muted'}>{j.quantidade > 0 ? `${j.quantidade} em estoque` : 'sem estoque'}</small></span>
+            <span className="bl-meta"><b>{brl(j.valor_venda)}</b><small className={(j.disponivel ?? j.quantidade) > 0 ? 'money' : 'muted'}>{estoqueTxt(j)}</small></span>
           </li>))}
       </ul>}
     </div>)

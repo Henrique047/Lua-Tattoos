@@ -5,7 +5,7 @@ import timeGrid from '@fullcalendar/timegrid'
 import list from '@fullcalendar/list'
 import interaction from '@fullcalendar/interaction'
 import ptBr from '@fullcalendar/core/locales/pt-br'
-import { Plus, MessageCircle, Check, Ban, Pencil, Clock, Gem, Sparkles, Trash2, Package } from 'lucide-react'
+import { Plus, MessageCircle, Check, Ban, Pencil, Clock, Gem, Sparkles, Trash2, Package, AlertTriangle } from 'lucide-react'
 import { supabase, brl, toLocalInput, zap, mensagemWhats } from '../lib/supabase'
 import { r2, calcular } from '../lib/calc'
 import { PagamentoLinhas, useFormas, somaLinhas, paraRpc, linhasValidas } from '../lib/pagamentos'
@@ -33,11 +33,11 @@ export default function Agenda({ ctx }) {
   const mobile = useMobile(), formas = useFormas()
   const [lista, setLista] = useState([]), [joias, setJoias] = useState([]), [procs, setProcs] = useState([]), [dia, setDia] = useState(hojeStr())
   const [form, setForm] = useState(null), [sel, setSel] = useState(null), [erro, setErro] = useState(''), [erroCarga, setErroCarga] = useState('')
-  const [pago, setPago] = useState(''), [linhasConc, setLinhasConc] = useState([]), [busy, setBusy] = useState(false)
+  const [pago, setPago] = useState(''), [linhasConc, setLinhasConc] = useState([]), [busy, setBusy] = useState(false), [comp, setComp] = useState({})
 
   const carregar = async () => {
     const [a, j, p] = await Promise.all([
-      supabase.from('agendamentos').select('*, encomendas(id,joia_id,valor_total,sinal), agendamento_itens(id, joia_id, procedimento_id, joias(nome,tamanho,material), procedimentos(nome))')
+      supabase.from('agendamentos').select('*, encomendas(id,valor_total,sinal,encomenda_itens(id,joia_id,valor)), agendamento_itens(id, joia_id, procedimento_id, encomenda_item_id, joias(nome,tamanho,material), procedimentos(nome))')
         .neq('status', 'cancelado').order('inicio').order('created_at', { referencedTable: 'agendamento_itens' }),
       supabase.from('joias').select('*').order('nome'),
       supabase.from('procedimentos').select('*').order('nome')])
@@ -49,12 +49,21 @@ export default function Agenda({ ctx }) {
   // vindo da tela de Encomendas ("Agendar"): o formulário abre com cliente, joia, total e sinal já preenchidos
   useEffect(() => {
     const e = ctx?.encomenda; if (!e) return
+    const its = [...(e.encomenda_itens || [])].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
     setForm({ ...vazio(), cliente_nome: e.cliente_nome, telefone: e.telefone || '', valor_total: Number(e.valor_total),
-      encomenda: { id: e.id, joia_id: e.joia_id, valor_total: Number(e.valor_total), sinal: Number(e.sinal) }, itens: [{ joia_id: e.joia_id, procedimento_id: '' }] })
+      encomenda: { id: e.id, valor_total: Number(e.valor_total), sinal: Number(e.sinal), itens: its.map(i => ({ id: i.id, joia_id: i.joia_id, valor: Number(i.valor) })) },
+      itens: its.map(i => ({ joia_id: i.joia_id, procedimento_id: '', encomenda_item_id: i.id })) })
   }, [])
 
   // ao abrir um agendamento, o valor recebido já vem preenchido com o que falta
   useEffect(() => { if (sel) { setPago(String(falta(sel))); setLinhasConc([]) } }, [sel?.id])
+
+  // unidades de cada joia já comprometidas em OUTROS agendamentos em aberto (o agendamento aberto/editado não conta contra si)
+  const ctxComp = form ? (form.id || null) : (sel && sel.status === 'agendado' ? sel.id : undefined)
+  useEffect(() => {
+    if (ctxComp === undefined) return
+    supabase.rpc('joias_comprometidas', { p_excluir: ctxComp }).then(({ data }) => setComp(Object.fromEntries((data || []).map(r => [r.joia_id, r.qtd]))))
+  }, [ctxComp, !!form])
 
   const eventos = useMemo(() => lista.map(a => ({
     id: a.id, title: a.cliente_nome, start: a.inicio, end: a.fim,
@@ -81,8 +90,8 @@ export default function Agenda({ ctx }) {
   // A joia de uma encomenda vale o preço combinado na encomenda, não o do catálogo.
   const resolver = it => {
     const joia = joias.find(x => x.id === it.joia_id)
-    const enc = form?.encomenda
-    return { joia: joia && enc && joia.id === enc.joia_id ? { ...joia, valor_venda: enc.valor_total } : joia, proc: procs.find(x => x.id === it.procedimento_id) }
+    const ei = it.encomenda_item_id && form?.encomenda?.itens?.find(x => x.id === it.encomenda_item_id)
+    return { joia: joia && ei ? { ...joia, valor_venda: ei.valor } : joia, proc: procs.find(x => x.id === it.procedimento_id) }
   }
   const somaItens = itens => itens.reduce((s, it) => { const { joia, proc } = resolver(it); return { j: s.j + Number(joia?.valor_venda || 0), p: s.p + Number(proc?.valor || 0) } }, { j: 0, p: 0 })
   const mudarItens = itens => setForm(f => { const s = somaItens(itens); return { ...f, itens, valor_total: r2(s.j + s.p) } })
@@ -98,6 +107,30 @@ export default function Agenda({ ctx }) {
   const cobrarForm = form ? Math.max(0, Number(form.valor_total || 0) - Number(form.desconto || 0)) : 0
   const custoForm = form ? (Number(form.custo_tatuagem || 0) || 0) : 0
 
+  // Avisos de estoque: compara as unidades usadas em cada joia com o que está livre (estoque principal − outros agendamentos).
+  // As linhas que vêm de um pedido (encomenda_item_id) saem do estoque reservado, então não entram na conta.
+  const disponivel = j => Math.max(0, j.quantidade - (comp[j.id] || 0))
+  const rotuloJoia = j => `${txtJoia(j)} · ${brl(j.valor_venda)} (${disponivel(j)} disponível${disponivel(j) === 1 ? '' : 's'}${j.reservado > 0 ? ` · ${j.reservado} reservada${j.reservado > 1 ? 's' : ''}` : ''})`
+  const avisosEstoque = itens => {
+    const usado = {}, excesso = new Set()
+    itens.forEach((it, k) => {
+      if (!it.joia_id) return
+      if (it.encomenda_item_id) return
+      usado[it.joia_id] = (usado[it.joia_id] || 0) + 1
+      const j = joias.find(x => x.id === it.joia_id)
+      if (j && usado[it.joia_id] > disponivel(j)) excesso.add(k)
+    })
+    const avisos = Object.entries(usado).flatMap(([id, n]) => {
+      const j = joias.find(x => x.id === id); if (!j || n <= disponivel(j)) return []
+      const d = disponivel(j), c = comp[id] || 0, det = [`estoque ${j.quantidade}`]
+      if (c) det.push(`${c} já em outros agendamentos`); if (j.reservado) det.push(`${j.reservado} reservada${j.reservado > 1 ? 's' : ''} para clientes`)
+      return [`${txtJoia(j)}: o agendamento usa ${n}, mas ${d === 0 ? 'nenhuma está disponível' : d === 1 ? 'só 1 está disponível' : `só ${d} estão disponíveis`} (${det.join(' · ')}).`]
+    })
+    return { avisos, excesso }
+  }
+  const av = form && form.servico === 'piercing' ? avisosEstoque(form.itens) : { avisos: [], excesso: new Set() }
+  const avSel = sel && sel.status === 'agendado' ? avisosEstoque((sel.agendamento_itens || []).map(i => ({ joia_id: i.joia_id, encomenda_item_id: i.encomenda_item_id }))) : { avisos: [], excesso: new Set() }
+
   const salvar = async e => {
     e.preventDefault(); setErro('')
     if (new Date(form.fim) <= new Date(form.inicio)) return setErro('O horário final precisa ser depois do início.')
@@ -105,6 +138,7 @@ export default function Agenda({ ctx }) {
     if (Number.isNaN(custo) || custo < 0) return setErro('O custo precisa ser um valor igual ou maior que zero.')
     if (sinalForm > Number(form.valor_total || 0) - Number(form.desconto || 0) + 0.001) return setErro('O sinal não pode ser maior que o valor a cobrar.')
     if (!form.encomenda && !linhasValidas(form.pagSinal, formas)) return setErro('Há uma forma de pagamento do sinal desativada ou sem taxa cadastrada.')
+    if (av.avisos.length && !confirm('⚠ Joia sem estoque disponível:\n\n' + av.avisos.join('\n') + '\n\nSalvar o agendamento mesmo assim? (Para concluir o atendimento será preciso ter a joia em estoque.)')) return
     const dados = {
       servico: form.servico, cliente_nome: form.cliente_nome, telefone: form.telefone || null, observacoes: form.observacoes || null,
       valor_total: Number(form.valor_total || 0), desconto: Number(form.desconto || 0), custo_tatuagem: custo,
@@ -130,9 +164,9 @@ export default function Agenda({ ctx }) {
     setForm({
       id: sel.id, servico: sel.servico, cliente_nome: sel.cliente_nome, telefone: sel.telefone || '',
       inicio: toLocalInput(sel.inicio), fim: toLocalInput(sel.fim), valor_total: sel.valor_total, desconto: sel.desconto, custo_tatuagem: Number(sel.custo_tatuagem) > 0 ? String(sel.custo_tatuagem) : '',
-      pagSinal, encomenda: sel.encomendas ? { id: sel.encomendas.id, joia_id: sel.encomendas.joia_id, valor_total: Number(sel.encomendas.valor_total), sinal: Number(sel.encomendas.sinal) } : null,
+      pagSinal, encomenda: sel.encomendas ? { id: sel.encomendas.id, valor_total: Number(sel.encomendas.valor_total), sinal: Number(sel.encomendas.sinal), itens: (sel.encomendas.encomenda_itens || []).map(i => ({ id: i.id, joia_id: i.joia_id, valor: Number(i.valor) })) } : null,
       observacoes: sel.observacoes || '',
-      itens: sel.agendamento_itens?.length ? sel.agendamento_itens.map(i => ({ joia_id: i.joia_id || '', procedimento_id: i.procedimento_id || '' })) : [itemVazio()]
+      itens: sel.agendamento_itens?.length ? sel.agendamento_itens.map(i => ({ joia_id: i.joia_id || '', procedimento_id: i.procedimento_id || '', encomenda_item_id: i.encomenda_item_id || '' })) : [itemVazio()]
     })
   }
 
@@ -211,6 +245,10 @@ export default function Agenda({ ctx }) {
             </div>
             {sel.servico === 'tatuagem' && Number(sel.custo_tatuagem) > 0 && <p className="hint">Custo estimado da tatuagem: <b>{brl(sel.custo_tatuagem)}</b> (entra nos relatórios como custo).</p>}
 
+            {avSel.avisos.length > 0 && <div className="alerta-estoque" role="alert"><AlertTriangle size={20} /><div>
+              <strong>Joia sem estoque disponível</strong>{avSel.avisos.map((m, i) => <p key={i}>{m}</p>)}
+              <small>Reponha o estoque, ou ajuste o agendamento, antes de concluir.</small></div></div>}
+
             {sel.status === 'agendado' && <>
               <div className="pagar">
                 <div className="pagar-row">
@@ -245,16 +283,20 @@ export default function Agenda({ ctx }) {
 
             {form.servico === 'piercing' && <div className="full itens">
               <div className="itens-head"><strong>Joias e procedimentos</strong><small className="muted">Escolha só a joia, só o procedimento ou os dois</small></div>
-              {form.encomenda && <p className="hint"><Package size={14} /> A joia da encomenda já está selecionada (preço combinado de {brl(form.encomenda.valor_total)}). Escolha o procedimento.</p>}
+              {form.encomenda && <p className="hint"><Package size={14} /> As joias do pedido já estão selecionadas (valor combinado de {brl(form.encomenda.valor_total)}). Escolha o procedimento de cada uma; você também pode acrescentar outras joias.</p>}
               {form.itens.map((it, k) => (
-                <div className="item-row" key={k}>
-                  <label>Joia<select value={it.joia_id} onChange={e => setItem(k, 'joia_id', e.target.value)}><option value="">Sem joia (cliente já tem)</option>
-                    {joias.filter(j => !j.oculta || j.id === it.joia_id).map(j => <option key={j.id} value={j.id} disabled={j.quantidade < 1 && j.id !== it.joia_id}>{txtJoia(j)} · {brl(j.valor_venda)} ({j.quantidade}{j.reservado > 0 ? ` · ${j.reservado} reservada${j.reservado > 1 ? 's' : ''}` : ''})</option>)}</select></label>
+                <div className={'item-row' + (av.excesso.has(k) ? ' alerta' : '')} key={k}>
+                  <label>Joia<select value={it.joia_id} disabled={!!it.encomenda_item_id} onChange={e => setItem(k, 'joia_id', e.target.value)}><option value="">Sem joia (cliente já tem)</option>
+                    {joias.filter(j => !j.oculta || j.id === it.joia_id).map(j => <option key={j.id} value={j.id}>{rotuloJoia(j)}</option>)}</select></label>
                   <label>Procedimento<select value={it.procedimento_id} onChange={e => setItem(k, 'procedimento_id', e.target.value)}><option value="">Sem procedimento</option>
                     {procs.map(p => <option key={p.id} value={p.id}>{p.nome} · {brl(p.valor)}</option>)}</select></label>
-                  <button type="button" className="icon-btn danger" aria-label="Remover linha" onClick={() => delItem(k)}><Trash2 size={17} /></button>
+                  {it.encomenda_item_id ? <span className="tag-enc" title="Joia reservada do pedido do cliente"><Package size={17} /></span>
+                    : <button type="button" className="icon-btn danger" aria-label="Remover linha" onClick={() => delItem(k)}><Trash2 size={17} /></button>}
                 </div>))}
               <button type="button" className="btn ghost" onClick={addItem}><Plus size={16} />Adicionar joia e procedimento</button>
+              {av.avisos.length > 0 && <div className="alerta-estoque" role="alert"><AlertTriangle size={20} /><div>
+                <strong>Joia sem estoque disponível</strong>{av.avisos.map((m, i) => <p key={i}>{m}</p>)}
+                <small>Você pode salvar mesmo assim, mas o atendimento só poderá ser concluído quando houver a joia em estoque.</small></div></div>}
               {procs.length === 0 && <small className="muted">Nenhum procedimento cadastrado ainda. Cadastre na tela Procedimentos.</small>}
               {(() => { const p = previa(); return (
                 <div className="vals">
